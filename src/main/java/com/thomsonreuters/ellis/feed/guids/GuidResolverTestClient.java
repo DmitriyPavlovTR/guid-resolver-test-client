@@ -14,7 +14,10 @@ import java.util.Map;
 
 class GuidResolverTestClient {
 
-  public static final String HOST = "http://localhost:8030/";
+  public static final String HOST =
+      //"http://localhost:8030/";
+      "http://ellis-dev.int.thomsonreuters.com:8030/";
+      //"http://solt-preprod.int.thomsonreuters.com:8030/";
 
   public static void main(String[] args) throws IOException {
     final String path = "resolve";
@@ -28,7 +31,7 @@ class GuidResolverTestClient {
       sendPostRequest(path, params);
 
       if (i % 4 == 0) {
-        printSpeed(started, i);
+        printSpeed(started, i + 1);
       }
     }
 
@@ -39,7 +42,7 @@ class GuidResolverTestClient {
     final long msElapsed = started.elapsed().toMillis();
     final double tps = cnt * 1000.0 / msElapsed;
     System.out.println("N=" + cnt + ", Required " + msElapsed + " millis: " +
-        String.format("%.2f", tps) + " tps");
+        String.format("%.2f", tps) + " tps at " + HOST);
   }
 
   private static StringBuilder sendPostRequest(String path, Map<String, Object> params) throws IOException {
