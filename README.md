@@ -1,0 +1,1 @@
+# guid-resolver-test-client
