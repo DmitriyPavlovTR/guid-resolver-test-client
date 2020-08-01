@@ -23,15 +23,23 @@ class GuidResolverTestClient {
     params.put("context", "eu/doc/legislation/binary/f74bc3e6-4ae3-11e9-a8ed-01aa75ed71a1:BUL:0");
 
     final Stopwatch started = Stopwatch.createStarted();
-    final int cnt = 10;
+    final int cnt = 1000;
     for (int i = 0; i < cnt; i++) {
       sendPostRequest(path, params);
+
+      if (i % 4 == 0) {
+        printSpeed(started, i);
+      }
     }
+
+    printSpeed(started, cnt);
+  }
+
+  private static void printSpeed(Stopwatch started, int cnt) {
     final long msElapsed = started.elapsed().toMillis();
-    final double tps = cnt * 100.0 / msElapsed;
+    final double tps = cnt * 1000.0 / msElapsed;
     System.out.println("N=" + cnt + ", Required " + msElapsed + " millis: " +
         String.format("%.2f", tps) + " tps");
-
   }
 
   private static StringBuilder sendPostRequest(String path, Map<String, Object> params) throws IOException {
