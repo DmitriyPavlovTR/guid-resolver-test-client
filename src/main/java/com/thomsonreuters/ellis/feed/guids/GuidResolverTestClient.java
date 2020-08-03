@@ -11,6 +11,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 
 class GuidResolverTestClient {
 
@@ -30,7 +32,7 @@ class GuidResolverTestClient {
       //"http://ellis-dev.int.thomsonreuters.com:8030/";
       //"http://solt-preprod.int.thomsonreuters.com:8030/";
 
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void mainFindGuids(String[] args) throws IOException, InterruptedException {
     final String path = "findGuids";
 
     final List<String> contexts =
@@ -44,13 +46,14 @@ class GuidResolverTestClient {
 
     // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
-    runSimilarRequestMultithreadedTest(path, contexts, content, 100);
+    runSimilarRequestMultithreadedTest(path, contexts, content, 100, 10);
   }
-  public static void mainResolveBatch(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args) throws IOException, InterruptedException {
     final String path = "resolveBatch";
 
     final List<String> contexts =
-        Arrays.asList("eu/doc/legislation/binary/f74bc3e6-4ae3-11e9-a8ed-01aa75ed71a1:BUL:0",
+        Arrays.asList(
+            "eu/doc/legislation/binary/f74bc3e6-4ae3-11e9-a8ed-01aa75ed71a1:BUL:0",
             "eu/doc/legislation/binary/9797a8dc-efdf-4d2e-a25b-9d07a8b629bb:POR:0",
             "eu/doc/legislation/binary/6b3e4af4-9e53-11ea-9d2d-01aa75ed71a1:FRA:0",
             "eu/docfamily/legislation/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1:pdfs:HUN",
@@ -69,15 +72,22 @@ class GuidResolverTestClient {
             "eu/doc/legislation/binary/e28f07bb-5705-45ad-8a46-a1d6a3bb1b52:DEU:0",
             "eu/doc/legislation/fulltext/cellar/b496e904-1a4a-45d4-8236-9f360d0946a2:@DOCDETAILS",
             "eu/docfamily/legislation/cellar/bd598921-4785-4f80-9dcb-1c2039e5cd5c:parent:@EU-ANNEXES:annIII:annpart1:unp005");
-    final String content = new Gson().toJson(contexts);
+
+    final SecureRandom secureRandom = new SecureRandom();
+    final String content
+        = new Gson().toJson(
+            contexts.stream().map(s->s.replaceFirst("eu", "itest")+
+                "/test" + Integer.toHexString(secureRandom.nextInt(1000)))
+                .collect(
+        Collectors.toList()));
 
    // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
-    runSimilarRequestMultithreadedTest(path, contexts, content, 1000);
+    runSimilarRequestMultithreadedTest(path, contexts, content, 20, 2);
   }
 
   private static void runSimilarRequestMultithreadedTest(String path, List<String> contexts,
-                                                         String content, int totalCnt)
+                                                         String content, int totalCnt, int threads)
       throws InterruptedException {
     final Stopwatch started = Stopwatch.createStarted();
 
@@ -99,7 +109,6 @@ class GuidResolverTestClient {
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
     List<Future<?>> futures = new ArrayList<>();
 
-    final int threads = 10;
     for (int t = 0; t < threads; t++) {
       final int cnt = totalCnt / threads;
       futures.add(executorService.submit(() -> {
