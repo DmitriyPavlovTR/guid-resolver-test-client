@@ -38,7 +38,8 @@ class GuidResolverTestClient {
             "eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1" ,
             "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1%art20",
             "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1%art21",
-            "eu/docfamily/legislation/cellar/50721be0-fa8f-4ae9-83b3-645e8e35f738%art15");
+            "eu/docfamily/legislation/cellar/50721be0-fa8f-4ae9-83b3-645e8e35f738%art15",
+            "eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art55 ");
     final String content = new Gson().toJson(contexts);
 
     // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
