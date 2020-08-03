@@ -44,7 +44,7 @@ class GuidResolverTestClient {
 
     // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
-    runSimilarRequestMultithreadedTest(path, contexts, content);
+    runSimilarRequestMultithreadedTest(path, contexts, content, 100);
   }
   public static void mainResolveBatch(String[] args) throws IOException, InterruptedException {
     final String path = "resolveBatch";
@@ -73,11 +73,11 @@ class GuidResolverTestClient {
 
    // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
-    runSimilarRequestMultithreadedTest(path, contexts, content);
+    runSimilarRequestMultithreadedTest(path, contexts, content, 1000);
   }
 
   private static void runSimilarRequestMultithreadedTest(String path, List<String> contexts,
-                                                         String content)
+                                                         String content, int totalCnt)
       throws InterruptedException {
     final Stopwatch started = Stopwatch.createStarted();
 
@@ -99,7 +99,6 @@ class GuidResolverTestClient {
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
     List<Future<?>> futures = new ArrayList<>();
 
-    final int totalCnt = 1000;
     final int threads = 10;
     for (int t = 0; t < threads; t++) {
       final int cnt = totalCnt / threads;
