@@ -75,8 +75,10 @@ class GuidResolverTestClient {
 
     List<Future<?>> futures = new ArrayList<>();
 
-    for (int t = 0; t < 10; t++) {
-      final int cnt = 10;
+    final int totalCnt = 1000;
+    final int threads = 10;
+    for (int t = 0; t < threads; t++) {
+      final int cnt = totalCnt / threads;
       futures.add(executorService.submit(() -> {
         for (int i = 0; i < cnt; i++) {
           sendPostRequest(path, content);
