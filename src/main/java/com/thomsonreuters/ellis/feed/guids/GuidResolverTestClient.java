@@ -13,7 +13,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,11 +26,26 @@ import java.util.concurrent.atomic.LongAdder;
 class GuidResolverTestClient {
 
   public static final String HOST =
-      //"http://localhost:8030/";
+      "http://localhost:8030/";
       //"http://ellis-dev.int.thomsonreuters.com:8030/";
-      "http://solt-preprod.int.thomsonreuters.com:8030/";
+      //"http://solt-preprod.int.thomsonreuters.com:8030/";
 
   public static void main(String[] args) throws IOException, InterruptedException {
+    final String path = "findGuids";
+
+    final List<String> contexts =
+        Arrays.asList(
+            "eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1" ,
+            "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1%art20",
+            "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1%art21",
+            "eu/docfamily/legislation/cellar/50721be0-fa8f-4ae9-83b3-645e8e35f738%art15");
+    final String content = new Gson().toJson(contexts);
+
+    // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
+
+    runSimilarRequestMultithreadedTest(path, contexts, content);
+  }
+  public static void mainResolveBatch(String[] args) throws IOException, InterruptedException {
     final String path = "resolveBatch";
 
     final List<String> contexts =
@@ -55,7 +69,17 @@ class GuidResolverTestClient {
             "eu/doc/legislation/fulltext/cellar/b496e904-1a4a-45d4-8236-9f360d0946a2:@DOCDETAILS",
             "eu/docfamily/legislation/cellar/bd598921-4785-4f80-9dcb-1c2039e5cd5c:parent:@EU-ANNEXES:annIII:annpart1:unp005");
     final String content = new Gson().toJson(contexts);
+
+   // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
+
+    runSimilarRequestMultithreadedTest(path, contexts, content);
+  }
+
+  private static void runSimilarRequestMultithreadedTest(String path, List<String> contexts,
+                                                         String content)
+      throws InterruptedException {
     final Stopwatch started = Stopwatch.createStarted();
+
     final LongAdder processedReq = new LongAdder();
     final Thread logThread = new Thread(() -> {
       while (!Thread.currentThread().isInterrupted()) {
@@ -72,7 +96,6 @@ class GuidResolverTestClient {
     logThread.start();
 
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
-
     List<Future<?>> futures = new ArrayList<>();
 
     final int totalCnt = 1000;
@@ -81,7 +104,10 @@ class GuidResolverTestClient {
       final int cnt = totalCnt / threads;
       futures.add(executorService.submit(() -> {
         for (int i = 0; i < cnt; i++) {
-          sendPostRequest(path, content);
+          final String s = sendPostJsonRequest(path, content);
+          if (i == 3) {
+            System.out.println(Thread.currentThread().getName() + " Results:" + s);
+          }
           processedReq.add(1);
         }
         return cnt;
@@ -107,8 +133,9 @@ class GuidResolverTestClient {
     }
   }
 
-  private static void sendPostRequest(String path, String content) throws IOException {
-    sendPostRequest(path, content.getBytes(StandardCharsets.UTF_8), "application/json;charset=UTF-8");
+  private static String sendPostJsonRequest(String path, String content) throws IOException {
+    return sendPostRequest(path, content.getBytes(StandardCharsets.UTF_8),
+        "application/json;charset=UTF-8");
   }
 
   public static void mainResolve(String[] args) throws IOException {
@@ -139,7 +166,7 @@ class GuidResolverTestClient {
         String.format("%.2f", ctxps) + " ctx/s at " + HOST);
   }
 
-  private static StringBuilder sendPostRequest(String path, Map<String, Object> params) throws IOException {
+  private static String sendPostRequest(String path, Map<String, Object> params) throws IOException {
 
     StringBuilder postData = new StringBuilder();
     for (Map.Entry<String,Object> param : params.entrySet()) {
@@ -153,7 +180,7 @@ class GuidResolverTestClient {
     return sendPostRequest(path, postDataBytes, "application/x-www-form-urlencoded");
   }
 
-  private static StringBuilder sendPostRequest(String path, byte[] postDataBytes,
+  private static String sendPostRequest(String path, byte[] postDataBytes,
                                                String contentType) throws IOException {
     URL url = new URL(HOST +  path);
     HttpURLConnection conn = (HttpURLConnection)url.openConnection();
@@ -188,7 +215,7 @@ class GuidResolverTestClient {
       in.close();
 
       // print result
-      return response;
+      return response.toString();
     } else {
       System.err.println("POST request not worked");
     }
