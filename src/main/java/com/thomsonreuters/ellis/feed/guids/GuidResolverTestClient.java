@@ -30,10 +30,19 @@ class GuidResolverTestClient {
             "eu/doc/legislation/binary/9797a8dc-efdf-4d2e-a25b-9d07a8b629bb:POR:0",
             "eu/doc/legislation/binary/6b3e4af4-9e53-11ea-9d2d-01aa75ed71a1:FRA:0",
             "eu/docfamily/legislation/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1:pdfs:HUN",
-            "eu/doc/legislation/binary/e8eed569-8d69-495e-92b1-a7393e015e9c:POL:0",
-            "eu/doc/legislation/binary/a55c747d-7176-4776-9b16-6eb913087fc1:DEU:0",
+            "eu/doc/legislation/binary/9ea0fc6c-18c2-11e4-933d-01aa75ed71a1:DEU:0",
+            "eu/docfamily/legislation/cellar/238c44f4-cd1e-4a44-b389-14312dff4352:pdfs:LIT",
             "eu/doc/legislation/binary/b604bdc9-75db-44de-8258-b895f2adfff2:SWE:0",
-            "eu/doc/legislation/binary/f0929ffc-b99b-42cb-ac41-b415ee6e03c4:ELL:0");
+            "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1:parent:@EU-ENACTING-TERMS:titleII:cII:sI:art20",
+            "eu/docfamily/legislation/cellar/83aea4a3-6bff-11e3-9afb-01aa75ed71a1:parent:@EU-ENACTING-TERMS:titleII:cII:sI:art21",
+            "eu/docfamily/legislation/cellar/a7c47846-2e80-11e4-8c3c-01aa75ed71a1:parent:@EU-ANNEXES:annII:annpartB:annsubpartIII",
+            "eu/doc/legislation/fulltext/cellar/341c71ca-001e-4c83-8f69-d754b009792c:parent:@EU-ANNEXES:annVIII:annpartD:annsubpart1:annsubsubpartSPO_IDE_A_145:para(e)",
+            "eu/doc/legislation/fulltext/cellar/fc1050ce-b0ee-11e4-b5b2-01aa75ed71a1:parent:@EU-ENACTING-TERMS",
+            "eu/doc/legislation/fulltext/cellar/31948c15-64be-11e4-9cbe-01aa75ed71a1:parent:@EU-ANNEXES:annI:unp001",
+            "eu/doc/legislation/binary/49b2fec9-1bde-4865-b3cb-3cac22a6160e:NLD:0",
+            "eu/doc/legislation/binary/c300360f-808f-4104-af32-c65b736a3595:ENG:0",
+            "eu/doc/legislation/binary/c300360f-808f-4104-af32-c65b736a3595:ITA:0",
+            "eu/docfamily/legislation/cellar/bd598921-4785-4f80-9dcb-1c2039e5cd5c:parent:@EU-ANNEXES:annIII:annpart1:unp005");
     final String content = new Gson().toJson(contexts);
     final Stopwatch started = Stopwatch.createStarted();
     final int cnt = 100;
@@ -76,7 +85,7 @@ class GuidResolverTestClient {
     final double tps = cnt * 1000.0 / msElapsed;
     final double ctxps = tps * size;
     System.out.println("N=" + cnt + ", Required " + msElapsed + " millis: " +
-        String.format("%.2f", tps) + " reqps, " +
+        String.format("%.2f", tps) + " req/s, " +
         String.format("%.2f", ctxps) + " ctx/s at " + HOST);
   }
 
