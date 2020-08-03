@@ -1,6 +1,7 @@
 package com.thomsonreuters.ellis.feed.guids;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Throwables;
 import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,10 +11,18 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 class GuidResolverTestClient {
 
@@ -22,7 +31,7 @@ class GuidResolverTestClient {
       //"http://ellis-dev.int.thomsonreuters.com:8030/";
       "http://solt-preprod.int.thomsonreuters.com:8030/";
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException, InterruptedException {
     final String path = "resolveBatch";
 
     final List<String> contexts =
@@ -42,19 +51,58 @@ class GuidResolverTestClient {
             "eu/doc/legislation/binary/49b2fec9-1bde-4865-b3cb-3cac22a6160e:NLD:0",
             "eu/doc/legislation/binary/c300360f-808f-4104-af32-c65b736a3595:ENG:0",
             "eu/doc/legislation/binary/c300360f-808f-4104-af32-c65b736a3595:ITA:0",
+            "eu/doc/legislation/binary/e28f07bb-5705-45ad-8a46-a1d6a3bb1b52:DEU:0",
+            "eu/doc/legislation/fulltext/cellar/b496e904-1a4a-45d4-8236-9f360d0946a2:@DOCDETAILS",
             "eu/docfamily/legislation/cellar/bd598921-4785-4f80-9dcb-1c2039e5cd5c:parent:@EU-ANNEXES:annIII:annpart1:unp005");
     final String content = new Gson().toJson(contexts);
     final Stopwatch started = Stopwatch.createStarted();
-    final int cnt = 100;
-    for (int i = 0; i < cnt; i++) {
-      sendPostRequest(path, content);
+    final LongAdder processedReq = new LongAdder();
+    final Thread logThread = new Thread(() -> {
+      while (!Thread.currentThread().isInterrupted()) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
 
-      if (i % 4 == 0) {
-        printSpeed(started, i + 1, contexts.size());
+        printSpeed(started, processedReq.intValue(), contexts.size());
       }
+    });
+    logThread.setDaemon(true);
+    logThread.start();
+
+    final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+    List<Future<?>> futures = new ArrayList<>();
+
+    for (int t = 0; t < 10; t++) {
+      final int cnt = 10;
+      futures.add(executorService.submit(() -> {
+        for (int i = 0; i < cnt; i++) {
+          sendPostRequest(path, content);
+          processedReq.add(1);
+        }
+        return cnt;
+      }));
     }
 
-    printSpeed(started, cnt, contexts.size());
+    futures.forEach(GuidResolverTestClient::safeGet);
+
+    executorService.shutdown();
+    executorService.awaitTermination(10, TimeUnit.SECONDS);
+
+    logThread.interrupt();
+  }
+
+  private static <T> T safeGet(Future<T> next) {
+    try {
+     return next.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    } catch (ExecutionException e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   private static void sendPostRequest(String path, String content) throws IOException {
@@ -124,7 +172,7 @@ class GuidResolverTestClient {
     // For POST only - END
 
     int responseCode = conn.getResponseCode();
-    System.out.println("POST Response Code :: " + responseCode);
+    //System.out.println("POST Response Code :: " + responseCode);
 
     if (responseCode == HttpURLConnection.HTTP_OK) { //success
       BufferedReader in = new BufferedReader(new InputStreamReader(
