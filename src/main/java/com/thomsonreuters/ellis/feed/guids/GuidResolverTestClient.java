@@ -83,7 +83,7 @@ class GuidResolverTestClient {
 
    // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
-    runSimilarRequestMultithreadedTest(path, contexts, content, 20, 2);
+    runSimilarRequestMultithreadedTest(path, contexts, content, 100, 10);
   }
 
   private static void runSimilarRequestMultithreadedTest(String path, List<String> contexts,
