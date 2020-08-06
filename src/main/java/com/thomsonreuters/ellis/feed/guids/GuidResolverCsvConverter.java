@@ -1,0 +1,66 @@
+package com.thomsonreuters.ellis.feed.guids;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
+import java.util.stream.Stream;
+
+public class GuidResolverCsvConverter {
+  public static void main(String[] args) throws IOException {
+    final String home = System.getProperty("user.home");
+    final String csv = "Documents\\TR_Uk_Legislative\\preprod_ctx.csv";
+
+    final String separator = ",";
+    int placeZeroBased = 1;
+    final BufferedWriter writer = new BufferedWriter(new FileWriter(".\\contexts.txt"));
+
+    final Stream<String> lines = Files.lines(Path.of(home, csv));
+    lines.parallel()
+        .map(line -> {
+          String lineResult = line;
+          for (int i = 0; i < placeZeroBased; i++) {
+            final int idx = lineResult.indexOf(separator);
+            if (idx == -1 & lineResult.length() > idx + 1) {
+              return null;
+            }
+            lineResult = lineResult.substring(idx + 1).trim();
+          }
+          return lineResult;
+        })
+        .filter(Objects::nonNull)
+        .filter(ctx -> {
+          if (ctx.endsWith("iiiii") // obvious test only
+              || ctx.startsWith("\"") // spaces in context
+              || ctx.startsWith("context") // test
+          ) {
+            return false;
+          }
+          if (ctx.startsWith("eu/doc/legislation/binary/")
+              || ctx.startsWith("eu/doc/legislation/fulltext/cellar/")
+              || ctx.startsWith("eu/docfamily/legislation/cellar/")) {
+            return true;
+          }
+          throw new IllegalStateException("Unexpected context, unable to classify: [" + ctx + "]");
+        })
+        .forEach(line -> {
+          try {
+            synchronized (writer) {
+              writer.write(line);
+              writer.write(String.format("%n"));
+            }
+          } catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        });
+
+    writer.close();
+  }
+}
+
