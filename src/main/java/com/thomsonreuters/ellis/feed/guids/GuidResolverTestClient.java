@@ -67,12 +67,11 @@ class GuidResolverTestClient {
             "eu/docfamily/legislation/cellar/bd598921-4785-4f80-9dcb-1c2039e5cd5c:parent:@EU-ANNEXES:annIII:annpart1:unp005");
 
     final SecureRandom secureRandom = new SecureRandom();
-    final String content
-        = new Gson().toJson(
-            contexts.stream().map(s->s.replaceFirst("eu", "itest")+
-                "/test" + Integer.toHexString(secureRandom.nextInt(1000)))
-                .collect(
-        Collectors.toList()));
+    final List<String> collect = contexts.stream().map(s -> s.replaceFirst("eu", "itest") +
+        "/test" + Integer.toHexString(secureRandom.nextInt(1000)))
+        .collect(
+            Collectors.toList());
+    final String content  = new Gson().toJson(collect);
 
    // ["eu/doc/legislation/fulltext/cellar/3b729ddf-f1f7-11e3-8cd4-01aa75ed71a1%art1"]
 
@@ -114,8 +113,7 @@ class GuidResolverTestClient {
   }
 
   private static String sendPostJsonRequest(String path, String content) throws IOException {
-    return sendPostRequest(path, content.getBytes(StandardCharsets.UTF_8),
-        "application/json;charset=UTF-8");
+    return GuidResolverTestUtils.sendRequestWithJsonBody(HOST, path, content);
   }
 
   public static void mainResolve(String[] args) throws IOException {
@@ -157,12 +155,8 @@ class GuidResolverTestClient {
     }
     byte[] postDataBytes = postData.toString().getBytes(StandardCharsets.UTF_8);
 
-    return sendPostRequest(path, postDataBytes, "application/x-www-form-urlencoded");
-  }
-
-  private static String sendPostRequest(String path, byte[] postDataBytes,
-                                               String contentType) throws IOException {
-    return GuidResolverTestUtils.sendPostRequest(HOST, path, postDataBytes, contentType);
+    return GuidResolverTestUtils.sendPostRequest(HOST, path, postDataBytes,
+        "application/x-www-form-urlencoded");
   }
 
 }

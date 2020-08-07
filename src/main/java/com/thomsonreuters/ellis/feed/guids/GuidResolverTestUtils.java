@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -81,5 +82,11 @@ public class GuidResolverTestUtils {
     } catch (ExecutionException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  static String sendRequestWithJsonBody(String host, String path, String content)
+      throws IOException {
+    return sendPostRequest(host, path,
+        content.getBytes(StandardCharsets.UTF_8), "application/json;charset=UTF-8");
   }
 }
