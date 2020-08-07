@@ -2,20 +2,27 @@ package com.thomsonreuters.ellis.feed.guids;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GuidResolverWarmupSender {
@@ -27,7 +34,7 @@ public class GuidResolverWarmupSender {
   private final int batchSize = 1000;
 
   final ExecutorService executorService = Executors.newFixedThreadPool(10);
-  final List<Future<?>> futures = new ArrayList<>();
+  final List<Future<List<String>>> futures = new ArrayList<>();
   final LongAdder submitted = new LongAdder();
   final LongAdder completed = new LongAdder();
   final AtomicBoolean processingStartedGuard = new AtomicBoolean();
@@ -35,28 +42,62 @@ public class GuidResolverWarmupSender {
 
   public static void main(String[] args) throws IOException, InterruptedException {
     new GuidResolverWarmupSender()
-        .parseFileAndStartTasks(".\\preprod_contexts.txt");
+        .parseFileAndStartTasks(".\\preprod_contexts.txt", ".\\completed.txt");
   }
 
-  private void parseFileAndStartTasks(String newfileSeparatedFile)
+  private void parseFileAndStartTasks(String ctxesToBeSent, String ctxesCompleted)
       throws IOException, InterruptedException {
-    final Stream<String> lines = Files.lines(Path.of(newfileSeparatedFile));
 
-    final Stream<String> contexts = lines
-        .filter(Objects::nonNull)
-        .filter(s -> !s.isBlank());
+    final Stream<String> earlierProcessed = loadLines(ctxesCompleted, false);
 
-    final Thread logThread = GuidResolverTestUtils.startPeriodicAction(
-        this::printStatus, 1000);
+    final Set<String> existingCtxes = earlierProcessed.collect(Collectors.toSet());
 
-    Iterables.partition(contexts::iterator, batchSize)
-        .forEach(this::submitBatch);
+    final Stream<String> contexts = loadLines(ctxesToBeSent, true);
 
-    futures.forEach(GuidResolverTestUtils::getNoThrows);
+    final Stream<String> uniqueStream = contexts.filter(ctx -> !existingCtxes.contains(ctx));
+
+    final Thread logThread = GuidResolverTestUtils.startPeriodicAction(this::printStatus, 1000);
+
+    final BufferedWriter completedFile = new BufferedWriter(new FileWriter(ctxesCompleted, true));
+    Iterables.partition(uniqueStream::iterator, batchSize).forEach(this::submitBatch);
+
+    existingCtxes.clear();
+
+    futures.stream()
+        .map(GuidResolverTestUtils::getNoThrows)
+        .forEach(f-> writeLines(completedFile, f));
 
     executorService.shutdown();
     executorService.awaitTermination(10, TimeUnit.SECONDS);
     logThread.interrupt();
+    completedFile.close();
+  }
+
+  private synchronized void writeLines(BufferedWriter completedFile, List<String> f) {
+    try {
+      for (String next : f) {
+        completedFile.write(next);
+        completedFile.newLine();
+      }
+      completedFile.flush();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private Stream<String> loadLines(String ctxesToBeSent, boolean shouldExist) throws IOException {
+    final Path of = Path.of(ctxesToBeSent);
+    if (!of.getFileName().toFile().exists()) {
+      if (shouldExist) {
+        throw new IllegalStateException(of.getFileName().toFile().getAbsolutePath());
+      } else {
+        return Stream.empty();
+      }
+    }
+
+    return Files.lines(of)
+          .filter(Objects::nonNull)
+          .filter(s -> !s.isBlank());
   }
 
   private void printStatus() {
@@ -75,25 +116,44 @@ public class GuidResolverWarmupSender {
   }
 
   public void submitBatch(List<String> p) {
+    final int size = p.size();
     futures.add(executorService.submit(() -> processBatch(p)));
-    submitted.add(p.size());
+    submitted.add(size);
   }
 
-  private Integer processBatch(List<String> ctxes) {
+  private List<String> processBatch(List<String> ctxes) {
     if(processingStartedGuard.compareAndSet(false, true)) {
       processing.start();
     }
     final int cnt = ctxes.size();
-    System.out.println(Thread.currentThread().getName() + " To process:" + cnt);
-    sendResolveBatch(ctxes);
+   // System.out.println(Thread.currentThread().getName() + " To process:" + cnt);
+    final List<String> strings = sendResolveBatch(ctxes);
     completed.add(cnt);
-    return cnt;
+    return strings;
   }
 
-  private void sendResolveBatch(List<String> ctxes)   {
+  private List<String> sendResolveBatch(List<String> ctxes)   {
     try {
       final String content  = new Gson().toJson(ctxes);
-      GuidResolverTestUtils.sendRequestWithJsonBody(HOST, "resolveBatch", content);
+      //ctxes.clear(); // to free memory
+
+      final String contentAsString =
+          GuidResolverTestUtils.sendRequestWithJsonBody(HOST, "resolveBatch", content);
+      final Type type = new TypeToken<ArrayList<GuidDtoMin>>() {
+      }.getType();
+      final List<GuidDtoMin> guidDtoList;
+      try {
+        guidDtoList = new Gson().fromJson(contentAsString, type);
+      } catch (JsonSyntaxException e) {
+        throw new RuntimeException(contentAsString, e);
+      }
+      final List<String> collect =
+          guidDtoList.stream().map(GuidDtoMin::getContext).collect(Collectors.toList());
+      if (collect.size() != ctxes.size()) {
+        System.err.println("************ Error\n" + collect + "\n" + ctxes);
+      }
+
+      return collect;
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
