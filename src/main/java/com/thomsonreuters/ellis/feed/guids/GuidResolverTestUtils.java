@@ -68,7 +68,7 @@ public class GuidResolverTestUtils {
       // print result
       return response.toString();
     } else {
-      System.err.println("POST request not worked");
+      System.err.println("POST request not worked: " + responseCode);
     }
     return null;
   }

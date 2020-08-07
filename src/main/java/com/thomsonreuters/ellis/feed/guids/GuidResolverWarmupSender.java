@@ -13,6 +13,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -32,9 +33,11 @@ public class GuidResolverWarmupSender {
       "http://solt-dev.int.thomsonreuters.com:8030/";
       //"http://solt-preprod.int.thomsonreuters.com:8030/";
 
-  private final int batchSize = 1000;
+  private final int batchSize = 500;
+  final int nThreads = 10;
 
-  final ExecutorService executorService = Executors.newFixedThreadPool(10);
+  final ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+
   final List<Future<List<String>>> futures = new ArrayList<>();
   final LongAdder submitted = new LongAdder();
   final LongAdder completed = new LongAdder();
@@ -145,6 +148,9 @@ public class GuidResolverWarmupSender {
 
       final String contentAsString =
           GuidResolverTestUtils.sendRequestWithJsonBody(HOST, "resolveBatch", content);
+      if(contentAsString==null)
+        return Collections.emptyList();
+
       final Type type = new TypeToken<ArrayList<GuidDtoMin>>() {
       }.getType();
       final List<GuidDtoMin> guidDtoList;
