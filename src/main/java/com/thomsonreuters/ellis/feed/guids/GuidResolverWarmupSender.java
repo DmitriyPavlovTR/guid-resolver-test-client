@@ -29,7 +29,8 @@ public class GuidResolverWarmupSender {
   public final String HOST =
       //"http://localhost:8030/";
       //"http://ellis-dev.int.thomsonreuters.com:8030/";
-      "http://solt-preprod.int.thomsonreuters.com:8030/";
+      "http://solt-dev.int.thomsonreuters.com:8030/";
+      //"http://solt-preprod.int.thomsonreuters.com:8030/";
 
   private final int batchSize = 1000;
 
@@ -42,10 +43,12 @@ public class GuidResolverWarmupSender {
 
   public static void main(String[] args) throws IOException, InterruptedException {
     new GuidResolverWarmupSender()
-        .parseFileAndStartTasks(".\\preprod_contexts.txt", ".\\completed.txt");
+        .parseFileAndStartTasks(".\\preprod_contexts.txt",
+            ".\\completed.txt",
+            ".\\completed_now.txt");
   }
 
-  private void parseFileAndStartTasks(String ctxesToBeSent, String ctxesCompleted)
+  private void parseFileAndStartTasks(String ctxesToBeSent, String ctxesCompleted, String ctxesCompletedNow)
       throws IOException, InterruptedException {
 
     final Stream<String> earlierProcessed = loadLines(ctxesCompleted, false);
@@ -59,18 +62,21 @@ public class GuidResolverWarmupSender {
     final Thread logThread = GuidResolverTestUtils.startPeriodicAction(this::printStatus, 1000);
 
     final BufferedWriter completedFile = new BufferedWriter(new FileWriter(ctxesCompleted, true));
+    final BufferedWriter completedNowFile = new BufferedWriter(new FileWriter(ctxesCompletedNow));
     Iterables.partition(uniqueStream::iterator, batchSize).forEach(this::submitBatch);
 
     existingCtxes.clear();
 
     futures.stream()
         .map(GuidResolverTestUtils::getNoThrows)
-        .forEach(f-> writeLines(completedFile, f));
+        .peek(f -> writeLines(completedFile, f))
+        .forEach(f -> writeLines(completedNowFile, f));
 
     executorService.shutdown();
     executorService.awaitTermination(10, TimeUnit.SECONDS);
     logThread.interrupt();
     completedFile.close();
+    completedNowFile.close();
   }
 
   private synchronized void writeLines(BufferedWriter completedFile, List<String> f) {
