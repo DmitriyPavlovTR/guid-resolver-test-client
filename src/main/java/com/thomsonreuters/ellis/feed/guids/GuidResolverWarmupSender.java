@@ -27,14 +27,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GuidResolverWarmupSender {
-  public final String HOST =
-      //"http://localhost:8030/";
-      //"http://ellis-dev.int.thomsonreuters.com:8030/";
-      "http://solt-dev.int.thomsonreuters.com:8030/";
-      //"http://solt-preprod.int.thomsonreuters.com:8030/";
-
-  private final int batchSize = 500;
-  final int nThreads = 10;
+  private final String host;
+  private final int batchSize = 300;
+  private final int nThreads = 10;
 
   final ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
 
@@ -44,11 +39,19 @@ public class GuidResolverWarmupSender {
   final AtomicBoolean processingStartedGuard = new AtomicBoolean();
   final Stopwatch processing = Stopwatch.createUnstarted();
 
+  public GuidResolverWarmupSender(String host) {
+    this.host=host;
+  }
+
   public static void main(String[] args) throws IOException, InterruptedException {
-    new GuidResolverWarmupSender()
+    String envId = "solt-dev"; // ellis-dev, solt-preprod, solt-prod
+    String host =
+        //"http://localhost:8030/";
+        "http://" + envId + ".int.thomsonreuters.com:8030/";
+    new GuidResolverWarmupSender(host)
         .parseFileAndStartTasks(".\\preprod_contexts.txt",
-            ".\\completed.txt",
-            ".\\completed_now.txt");
+            ".\\completed_" + envId + ".txt",
+            ".\\completed_now_" + envId + ".txt");
   }
 
   private void parseFileAndStartTasks(String ctxesToBeSent, String ctxesCompleted, String ctxesCompletedNow)
@@ -147,9 +150,10 @@ public class GuidResolverWarmupSender {
       //ctxes.clear(); // to free memory
 
       final String contentAsString =
-          GuidResolverTestUtils.sendRequestWithJsonBody(HOST, "resolveBatch", content);
-      if(contentAsString==null)
+          GuidResolverTestUtils.sendRequestWithJsonBody(host, "resolveBatch", content);
+      if (contentAsString == null) {
         return Collections.emptyList();
+      }
 
       final Type type = new TypeToken<ArrayList<GuidDtoMin>>() {
       }.getType();
