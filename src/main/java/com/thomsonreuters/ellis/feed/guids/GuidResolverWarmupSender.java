@@ -28,7 +28,7 @@ public class GuidResolverWarmupSender {
 
   public static void main(String[] args) throws IOException, InterruptedException {
     new GuidResolverWarmupSender()
-        .parseFileAndStartTasks(".\\contexts.txt");
+        .parseFileAndStartTasks(".\\preprod_contexts.txt");
   }
 
   private void parseFileAndStartTasks(String newfileSeparatedFile)

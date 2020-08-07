@@ -9,16 +9,17 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 public class GuidResolverCsvConverter {
   public static void main(String[] args) throws IOException {
-    final String home = System.getProperty("user.home");
-    final String csv = "Documents\\TR_Uk_Legislative\\preprod_ctx.csv";
+    final String home = "."; // System.getProperty("user.home");
+    final String csv = "output.txt"; //"Documents\\TR_Uk_Legislative\\preprod_ctx.csv";
 
     final String separator = ",";
-    int placeZeroBased = 1;
+    int placeZeroBased = 0; // only last place is supported now
     final BufferedWriter writer = new BufferedWriter(new FileWriter(".\\contexts.txt"));
 
     final Stream<String> lines = Files.lines(Path.of(home, csv));
@@ -39,6 +40,8 @@ public class GuidResolverCsvConverter {
           if (ctx.endsWith("iiiii") // obvious test only
               || ctx.startsWith("\"") // spaces in context
               || ctx.startsWith("context") // test
+              || ctx.startsWith("5f2599095a331b000bc0343b,")
+              || ctx.endsWith("eu/doc/legislati")
           ) {
             return false;
           }
@@ -49,6 +52,8 @@ public class GuidResolverCsvConverter {
           }
           throw new IllegalStateException("Unexpected context, unable to classify: [" + ctx + "]");
         })
+        .sorted(Comparator.naturalOrder())
+        .distinct()
         .forEach(line -> {
           try {
             synchronized (writer) {
