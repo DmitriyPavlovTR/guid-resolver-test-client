@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 
 public class GuidResolverWarmupSender {
   private final String host;
-  private final int batchSize = 300;
+  private final int batchSize = 500;
   private final int nThreads = 10;
 
   final ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
