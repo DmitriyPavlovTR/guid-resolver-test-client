@@ -84,6 +84,18 @@ public class GuidResolverTestUtils {
     }
   }
 
+  static <T> T getIgnoreException(Future<T> next) {
+    try {
+      return next.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    } catch (ExecutionException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   static String sendRequestWithJsonBody(String host, String path, String content)
       throws IOException {
     return sendPostRequest(host, path,

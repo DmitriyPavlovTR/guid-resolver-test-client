@@ -33,7 +33,7 @@ public class GuidResolverWarmupSender {
 
   final ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
 
-  final List<Future<List<String>>> futures = new ArrayList<>();
+  final List<Future<List<GuidDtoMin>>> futures = new ArrayList<>();
   final LongAdder scanned = new LongAdder();
   final LongAdder submitted = new LongAdder();
   final LongAdder completed = new LongAdder();
@@ -45,17 +45,21 @@ public class GuidResolverWarmupSender {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    String envId = "ellis-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
+    String envId = "solt-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
     String host =
         //"http://localhost:8030/";
         "http://" + envId + ".int.thomsonreuters.com:8030/";
     new GuidResolverWarmupSender(host)
         .parseFileAndStartTasks(".\\preprod_contexts.txt",
             ".\\completed_" + envId + ".txt",
-            ".\\completed_now_" + envId + ".txt");
+            ".\\completed_now_" + envId + ".txt",
+            ".\\completed_mapping_" + envId + ".txt");
   }
 
-  private void parseFileAndStartTasks(String ctxesToBeSent, String ctxesCompleted, String ctxesCompletedNow)
+  private void parseFileAndStartTasks(String ctxesToBeSent,
+                                      String ctxesCompleted,
+                                      String ctxesCompletedNow,
+                                      String mapping)
       throws IOException, InterruptedException {
 
     final Stream<String> earlierProcessed = loadLines(ctxesCompleted, false);
@@ -72,26 +76,45 @@ public class GuidResolverWarmupSender {
 
     final BufferedWriter completedFile = new BufferedWriter(new FileWriter(ctxesCompleted, true));
     final BufferedWriter completedNowFile = new BufferedWriter(new FileWriter(ctxesCompletedNow));
+    final BufferedWriter mappingFile = new BufferedWriter(new FileWriter(mapping));
+
     Iterables.partition(uniqueStream::iterator, batchSize).forEach(this::submitBatch);
 
     existingCtxes.clear();
 
     futures.stream()
         .map(GuidResolverTestUtils::getNoThrows)
-        .peek(f -> writeLines(completedFile, f))
-        .forEach(f -> writeLines(completedNowFile, f));
+        .filter(Objects::nonNull)
+        .peek(f -> writeContexts(completedFile, f))
+        .peek(f -> writeMapping(mappingFile, f))
+        .forEach(f -> writeContexts(completedNowFile, f));
 
     executorService.shutdown();
     executorService.awaitTermination(10, TimeUnit.SECONDS);
     logThread.interrupt();
     completedFile.close();
     completedNowFile.close();
+    mappingFile.close();
   }
 
-  private synchronized void writeLines(BufferedWriter completedFile, List<String> f) {
+  private synchronized void writeMapping(BufferedWriter completedFile, List<GuidDtoMin> f) {
     try {
-      for (String next : f) {
-        completedFile.write(next);
+      for (GuidDtoMin next : f) {
+        completedFile.write(next.getContext());
+        completedFile.write(",");
+        completedFile.write(next.getGuid());
+        completedFile.newLine();
+      }
+      completedFile.flush();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private synchronized void writeContexts(BufferedWriter completedFile, List<GuidDtoMin> f) {
+    try {
+      for (GuidDtoMin next : f) {
+        completedFile.write(next.getContext());
         completedFile.newLine();
       }
       completedFile.flush();
@@ -138,18 +161,18 @@ public class GuidResolverWarmupSender {
     submitted.add(size);
   }
 
-  private List<String> processBatch(List<String> ctxes) {
+  private List<GuidDtoMin> processBatch(List<String> ctxes) {
     if (processingStartedGuard.compareAndSet(false, true)) {
       processing.start();
     }
     final int cnt = ctxes.size();
     // System.out.println(Thread.currentThread().getName() + " To process:" + cnt);
-    final List<String> strings = sendResolveBatch(ctxes);
+    final List<GuidDtoMin> strings = sendResolveBatch(ctxes);
     completed.add(cnt);
     return strings;
   }
 
-  private List<String> sendResolveBatch(List<String> ctxes)   {
+  private List<GuidDtoMin> sendResolveBatch(List<String> ctxes)   {
     try {
       final String content  = new Gson().toJson(ctxes);
       //ctxes.clear(); // to free memory
@@ -168,13 +191,11 @@ public class GuidResolverWarmupSender {
       } catch (JsonSyntaxException e) {
         throw new RuntimeException(contentAsString, e);
       }
-      final List<String> collect =
-          guidDtoList.stream().map(GuidDtoMin::getContext).collect(Collectors.toList());
-      if (collect.size() != ctxes.size()) {
-        System.err.println("************ Error\n" + collect + "\n" + ctxes);
+      if (guidDtoList.size() != ctxes.size()) {
+        System.err.println("************ Error\n" + guidDtoList + "\n" + ctxes);
       }
 
-      return collect;
+      return guidDtoList;
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
