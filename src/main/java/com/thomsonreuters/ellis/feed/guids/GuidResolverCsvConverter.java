@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 public class GuidResolverCsvConverter {
@@ -22,9 +23,9 @@ public class GuidResolverCsvConverter {
     int placeZeroBased = 0; // only last place is supported now
     final BufferedWriter writer = new BufferedWriter(new FileWriter(".\\preprod_contexts.txt"));
 
+    final TreeSet<String> set = new TreeSet<>();
     final Stream<String> lines = Files.lines(Path.of(home, inputCsv));
-    lines.parallel()
-        .map(line -> {
+    lines.map(line -> {
           String lineResult = line;
           for (int i = 0; i < placeZeroBased; i++) {
             final int idx = lineResult.indexOf(separator);
@@ -37,8 +38,7 @@ public class GuidResolverCsvConverter {
         })
         .filter(Objects::nonNull)
         .filter(ctx -> {
-          if (ctx.endsWith("iiiii") // obvious test only
-              || ctx.startsWith("\"") // spaces in context
+          if (ctx.startsWith("\"") // spaces in context
               || ctx.startsWith("context") // test
               || ctx.startsWith("5f2599095a331b000bc0343b,")
               || ctx.endsWith("eu/doc/legislati")
@@ -52,9 +52,9 @@ public class GuidResolverCsvConverter {
           }
           throw new IllegalStateException("Unexpected context, unable to classify: [" + ctx + "]");
         })
-        .sorted(Comparator.naturalOrder())
-        .distinct()
-        .forEach(line -> {
+        .forEach(set::add);
+
+    set.forEach(line -> {
           try {
             synchronized (writer) {
               writer.write(line);
