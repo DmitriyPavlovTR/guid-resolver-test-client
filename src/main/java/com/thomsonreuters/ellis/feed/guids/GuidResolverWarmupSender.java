@@ -147,24 +147,23 @@ public class GuidResolverWarmupSender {
     final long submitted = this.submitted.longValue();
     final long completed = this.completed.longValue();
     final long remaining = submitted - completed;
-    res.append("Total Contexts [")
-        .append("scanned ").append(scanned.longValue()).append("; ")
-        .append("submitted ").append(submitted).append("; ")
-        .append("completed ").append(completed).append("; ")
-        .append("] ");
+    res.append("Total Contexts")
+        .append("scanned ").append(scanned.longValue()).append(", ")
+        .append("todo ").append(submitted).append(", ")
+        .append("completed ").append(completed).append("; ");
 
     final long elapsed = processing.elapsed(TimeUnit.MILLISECONDS);
     if (elapsed > 0) {
       double cps = (1000.0 * completed) / elapsed;
 
 
-      res.append("Speed ").append(String.format("%.2f", cps)).append(" ctx/s");
+      res.append("Speed ").append(String.format("%.2f", cps)).append(" ctx/s, ");
 
       if (cps > 0 && remaining > 0) {
         final double remainingSeconds = remaining / cps;
         final Duration remainingDuration = Duration.ofSeconds((long) remainingSeconds);
         final String sReformatted = remainingDuration.toString().replaceAll("PT", "").toLowerCase();
-        res.append(" est remains ").append(sReformatted);
+        res.append("est remain ").append(sReformatted);
 
         final Instant eta = Instant.now().plus(remainingDuration);
 
