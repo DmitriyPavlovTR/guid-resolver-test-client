@@ -34,6 +34,7 @@ public class GuidResolverWarmupSender {
   final ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
 
   final List<Future<List<String>>> futures = new ArrayList<>();
+  final LongAdder scanned = new LongAdder();
   final LongAdder submitted = new LongAdder();
   final LongAdder completed = new LongAdder();
   final AtomicBoolean processingStartedGuard = new AtomicBoolean();
@@ -44,7 +45,7 @@ public class GuidResolverWarmupSender {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    String envId = "solt-dev"; // ellis-dev, solt-preprod, solt-prod
+    String envId = "ellis-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
     String host =
         //"http://localhost:8030/";
         "http://" + envId + ".int.thomsonreuters.com:8030/";
@@ -63,7 +64,9 @@ public class GuidResolverWarmupSender {
 
     final Stream<String> contexts = loadLines(ctxesToBeSent, true);
 
-    final Stream<String> uniqueStream = contexts.filter(ctx -> !existingCtxes.contains(ctx));
+    final Stream<String> uniqueStream = contexts
+        .peek(ctx -> scanned.add(1))
+        .filter(ctx -> !existingCtxes.contains(ctx));
 
     final Thread logThread = GuidResolverTestUtils.startPeriodicAction(this::printStatus, 1000);
 
@@ -114,9 +117,11 @@ public class GuidResolverWarmupSender {
 
   private void printStatus() {
     final StringBuilder res = new StringBuilder();
-    res.append("Total Contexts [submitted ").append(submitted.longValue()).append("; ");
-    res.append("completed ").append(completed.longValue()).append("; ");
-    res.append("] ");
+    res.append("Total Contexts [")
+        .append("scanned ").append(scanned.longValue()).append("; ")
+        .append("submitted ").append(submitted.longValue()).append("; ")
+        .append("completed ").append(completed.longValue()).append("; ")
+        .append("] ");
 
     final long elapsed = processing.elapsed(TimeUnit.MILLISECONDS);
     if(elapsed>0) {
@@ -134,11 +139,11 @@ public class GuidResolverWarmupSender {
   }
 
   private List<String> processBatch(List<String> ctxes) {
-    if(processingStartedGuard.compareAndSet(false, true)) {
+    if (processingStartedGuard.compareAndSet(false, true)) {
       processing.start();
     }
     final int cnt = ctxes.size();
-   // System.out.println(Thread.currentThread().getName() + " To process:" + cnt);
+    // System.out.println(Thread.currentThread().getName() + " To process:" + cnt);
     final List<String> strings = sendResolveBatch(ctxes);
     completed.add(cnt);
     return strings;
