@@ -49,7 +49,7 @@ public class GuidResolverWarmupSender {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    String envId = "solt-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
+    String envId = "solt-prod"; // ellis-dev, solt-dev, solt-preprod, solt-prod
     String host =
         //"http://localhost:8030/";
         "http://" + envId + ".int.thomsonreuters.com:8030/";
@@ -160,20 +160,18 @@ public class GuidResolverWarmupSender {
 
       res.append("Speed ").append(String.format("%.2f", cps)).append(" ctx/s");
 
-      if (cps > 0) {
+      if (cps > 0 && remaining > 0) {
         final double remainingSeconds = remaining / cps;
         final Duration remainingDuration = Duration.ofSeconds((long) remainingSeconds);
         final String sReformatted = remainingDuration.toString().replaceAll("PT", "").toLowerCase();
         res.append(" est remains ").append(sReformatted);
 
-        final Instant now = Instant.now();
-        final Instant plus = now.plus(remainingDuration);
+        final Instant eta = Instant.now().plus(remainingDuration);
 
-        DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(" HH:mm:ss")
+        DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
-        res.append(" (").append(DATE_TIME_FORMATTER.format(plus)).append(" )");
-
+        res.append(" ( ").append(DATE_TIME_FORMATTER.format(eta)).append(" )");
       }
     }
     System.out.println(res.toString());
