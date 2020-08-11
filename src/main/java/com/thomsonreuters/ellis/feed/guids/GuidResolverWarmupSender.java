@@ -12,6 +12,10 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -140,17 +144,37 @@ public class GuidResolverWarmupSender {
 
   private void printStatus() {
     final StringBuilder res = new StringBuilder();
+    final long submitted = this.submitted.longValue();
+    final long completed = this.completed.longValue();
+    final long remaining = submitted - completed;
     res.append("Total Contexts [")
         .append("scanned ").append(scanned.longValue()).append("; ")
-        .append("submitted ").append(submitted.longValue()).append("; ")
-        .append("completed ").append(completed.longValue()).append("; ")
+        .append("submitted ").append(submitted).append("; ")
+        .append("completed ").append(completed).append("; ")
         .append("] ");
 
     final long elapsed = processing.elapsed(TimeUnit.MILLISECONDS);
-    if(elapsed>0) {
-      double cps = (1000.0 * completed.longValue()) / elapsed;
+    if (elapsed > 0) {
+      double cps = (1000.0 * completed) / elapsed;
+
 
       res.append("Speed ").append(String.format("%.2f", cps)).append(" ctx/s");
+
+      if (cps > 0) {
+        final double remainingSeconds = remaining / cps;
+        final Duration remainingDuration = Duration.ofSeconds((long) remainingSeconds);
+        final String sReformatted = remainingDuration.toString().replaceAll("PT", "").toLowerCase();
+        res.append(" est remains ").append(sReformatted);
+
+        final Instant now = Instant.now();
+        final Instant plus = now.plus(remainingDuration);
+
+        DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(" HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
+
+        res.append(" (").append(DATE_TIME_FORMATTER.format(plus)).append(" )");
+
+      }
     }
     System.out.println(res.toString());
   }
