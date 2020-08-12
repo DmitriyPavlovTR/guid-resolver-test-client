@@ -80,7 +80,7 @@ public class GuidResolverWarmupSender {
 
     final BufferedWriter completedFile = new BufferedWriter(new FileWriter(ctxesCompleted, true));
     final BufferedWriter completedNowFile = new BufferedWriter(new FileWriter(ctxesCompletedNow));
-    final BufferedWriter mappingFile = new BufferedWriter(new FileWriter(mapping));
+    final BufferedWriter mappingFile = new BufferedWriter(new FileWriter(mapping,true));
 
     Iterables.partition(uniqueStream::iterator, batchSize).forEach(this::submitBatch);
 
@@ -105,7 +105,7 @@ public class GuidResolverWarmupSender {
     try {
       for (GuidDtoMin next : f) {
         completedFile.write(next.getContext());
-        completedFile.write(",");
+        completedFile.write(", ");
         completedFile.write(next.getGuid());
         completedFile.newLine();
       }
