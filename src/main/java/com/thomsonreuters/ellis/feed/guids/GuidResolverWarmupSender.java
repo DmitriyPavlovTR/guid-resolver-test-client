@@ -147,7 +147,7 @@ public class GuidResolverWarmupSender {
     final long submitted = this.submitted.longValue();
     final long completed = this.completed.longValue();
     final long remaining = submitted - completed;
-    res.append("Total Contexts")
+    res.append("Total Contexts ")
         .append("scanned ").append(scanned.longValue()).append(", ")
         .append("todo ").append(submitted).append(", ")
         .append("completed ").append(completed).append("; ");
