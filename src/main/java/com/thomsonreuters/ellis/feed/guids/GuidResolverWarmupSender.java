@@ -49,7 +49,7 @@ public class GuidResolverWarmupSender {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    String envId = "solt-prod"; // ellis-dev, solt-dev, solt-preprod, solt-prod
+    String envId = "solt-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
     String host =
         //"http://localhost:8030/";
         "http://" + envId + ".int.thomsonreuters.com:8030/";
