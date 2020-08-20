@@ -49,10 +49,10 @@ public class GuidResolverWarmupSender {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    String envId = "localhost"; //"solt-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
+    String envId = "solt-dev"; // "localhost"; //"solt-dev"; // ellis-dev, solt-dev, solt-preprod, solt-prod
     String host =
-       "http://localhost:8030/";
-        //"http://" + envId + ".int.thomsonreuters.com:8030/";
+       //"http://localhost:8030/";
+        "http://" + envId + ".int.thomsonreuters.com:8030/";
     new GuidResolverWarmupSender(host)
         .parseFileAndStartTasks(".\\preprod_contexts.txt",
             ".\\completed_" + envId + ".txt",
